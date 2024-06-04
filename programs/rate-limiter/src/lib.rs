@@ -7,7 +7,7 @@ pub mod rate_limiter {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>, init_price: u64, rate_limit: i64) -> Result<()> {
-        let mut price_oracle = &ctx.accounts.price_oracle.to_accounts_info();
+        let mut price_oracle = &ctx.accounts.price_oracle.to_account_info();
         let now_ts = Clock::get().unwrap().unix_timestamp;
 
         price_oracle.price = init_price;
@@ -18,7 +18,7 @@ pub mod rate_limiter {
     }
 
     pub fn set_price(ctx: Context<OracleOperation>, price: u64) -> Result<()> {
-        let mut price_oracle = &ctx.accounts.price_oracle.to_accounts_info();
+        let mut price_oracle = &ctx.accounts.price_oracle.to_account_info();
 
         price_oracle.price = price;
 
@@ -26,7 +26,7 @@ pub mod rate_limiter {
     }
 
     pub fn update_rate_limit(ctx: Context<OracleOperation>, rate_limit: i64) -> Result<()> {
-        let mut price_oracle = &ctx.accounts.price_oracle.to_accounts_info();
+        let mut price_oracle = &ctx.accounts.price_oracle.to_account_info();
 
         price_oracle.rate_limit = rate_limit;
 
@@ -36,7 +36,7 @@ pub mod rate_limiter {
 
     pub fn fetch_price(ctx: Context<OracleOperation>) -> Result<()> {
 
-        let mut price_oracle = &ctx.accounts.price_oracle.to_accounts_info();
+        let mut price_oracle = &ctx.accounts.price_oracle.to_account_info();
         
         let price = price_oracle.get_price();
         let rate_limit = price_oracle.rate_limit;
@@ -62,12 +62,14 @@ pub mod rate_limiter {
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
-
     // store last time of price fetching
-    #[account(init, payer = authority, space = 8 + 1000)]
+    #[account(init, payer = authority, space = 8 + size_of::<PriceOracle>())]
     pub price_oracle: Account<'info, PriceOracle>,
 
-    pub authority: Signer<'info>
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub system_program: Program<'info, System>
 }
 
 #[derive(Accounts)]
@@ -97,6 +99,6 @@ impl PriceOracle {
     }
 
     pub fn update_fetch_time(&self, timestamp: i64) {
-        self.last_fetch_timestamp = &timestamp;
+        self.last_fetch_timestamp = timestamp;
     }
 }
