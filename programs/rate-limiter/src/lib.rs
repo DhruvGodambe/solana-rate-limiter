@@ -48,6 +48,8 @@ pub mod rate_limiter {
         let mut fetchingAvailable = false;
         if now_ts - last_fetch_timestamp > rate_limit {
             fetchingAvailable = true;
+        } else {
+            return err!(OracleError::RateLimit);
         }
 
         // do something with this price
@@ -91,4 +93,10 @@ pub struct PriceOracle {
 
     // store rate limit
     pub rate_limit: i64
+}
+
+#[error_code]
+pub enum OracleError {
+    #[msg("rate limit exceeded")]
+    RateLimit,
 }
