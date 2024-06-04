@@ -7,7 +7,7 @@ pub mod rate_limiter {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>, init_price: u64, rate_limit: i64) -> Result<()> {
-        let mut price_oracle = &ctx.accounts.price_oracle.to_account_info();
+        let mut price_oracle = &mut ctx.accounts.price_oracle;
         let now_ts = Clock::get().unwrap().unix_timestamp;
 
         price_oracle.price = init_price;
@@ -18,7 +18,7 @@ pub mod rate_limiter {
     }
 
     pub fn set_price(ctx: Context<OracleOperation>, price: u64) -> Result<()> {
-        let mut price_oracle = &ctx.accounts.price_oracle.to_account_info();
+        let mut price_oracle = &mut ctx.accounts.price_oracle;
 
         price_oracle.price = price;
 
@@ -26,7 +26,7 @@ pub mod rate_limiter {
     }
 
     pub fn update_rate_limit(ctx: Context<OracleOperation>, rate_limit: i64) -> Result<()> {
-        let mut price_oracle = &ctx.accounts.price_oracle.to_account_info();
+        let mut price_oracle = &mut ctx.accounts.price_oracle;
 
         price_oracle.rate_limit = rate_limit;
 
@@ -36,9 +36,9 @@ pub mod rate_limiter {
 
     pub fn fetch_price(ctx: Context<OracleOperation>) -> Result<()> {
 
-        let mut price_oracle = &ctx.accounts.price_oracle.to_account_info();
+        let mut price_oracle = &mut ctx.accounts.price_oracle;
         
-        let price = price_oracle.get_price();
+        let price = price_oracle.price;
         let rate_limit = price_oracle.rate_limit;
         let last_fetch_timestamp = price_oracle.last_fetch_timestamp;
 
@@ -63,11 +63,11 @@ pub mod rate_limiter {
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     // store last time of price fetching
-    #[account(init, payer = authority, space = 8 + size_of::<PriceOracle>())]
-    pub price_oracle: Account<'info, PriceOracle>,
+    #[account(init, payer = authority, space = 8 + std::mem::size_of::<PriceOracle>())]
+    pub price_oracle: Box<Account<'info, PriceOracle>>,
 
     #[account(mut)]
-    pub authority: Signer<'info>,
+    authority: Signer<'info>,
 
     pub system_program: Program<'info, System>
 }
@@ -75,7 +75,7 @@ pub struct Initialize<'info> {
 #[derive(Accounts)]
 pub struct OracleOperation<'info> {
     #[account(mut)]
-    pub price_oracle: Account<'info, PriceOracle>,
+    pub price_oracle: Box<Account<'info, PriceOracle>>,
 
     pub authority: Signer<'info>
 }
@@ -84,21 +84,11 @@ pub struct OracleOperation<'info> {
 #[derive(Default)]
 pub struct PriceOracle {
     // store price
-    price: u64,
+    pub price: u64,
     
     // store last time of price
-    last_fetch_timestamp: i64,
+    pub last_fetch_timestamp: i64,
 
     // store rate limit
-    rate_limit: i64
-}
-
-impl PriceOracle {
-    pub fn get_price(&self) -> u64 {
-        self.price
-    }
-
-    pub fn update_fetch_time(&self, timestamp: i64) {
-        self.last_fetch_timestamp = timestamp;
-    }
+    pub rate_limit: i64
 }
